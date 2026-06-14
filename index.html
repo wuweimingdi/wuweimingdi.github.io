@@ -2,9 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<!-- 手机端视口适配核心 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>英语默写练习（手机电脑通用）</title>
+<title>英语默写练习（手机专用）</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Microsoft Yahei,sans-serif}
 body{background:#f5f7fa;padding:12px;max-width:100%;margin:0 auto}
@@ -14,12 +13,10 @@ h2{text-align:center;color:#333;margin-bottom:16px;font-size:20px}
 .cn{font-size:16px;padding:12px;background:#f0f6ff;border-radius:8px;margin-bottom:16px;line-height:1.6;color:#222}
 .tip-voice{color:#9370DB;font-size:13px;margin:6px 0}
 .input-wrap{display:flex;flex-wrap:wrap;gap:10px 12px;margin:16px 0;align-items:center}
-/* 手机加大输入框，方便点击 */
 .inp{border:none;border-bottom:2px solid #666;outline:none;font-size:16px;text-align:center;padding:6px 4px;background:transparent;transition:all 0.2s;min-width:40px;height:40px}
 .inp.error{border-bottom-color:#f56c6c}
 .inp:focus{border-bottom-color:#409eff;border-bottom-width:3px}
 .inp:disabled{background:#f8f8f8;color:#999;cursor:not-allowed}
-/* 按钮自适应，手机自动换行、加大点击区域 */
 .btn-box{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;align-items:center}
 button{padding:10px 14px;border:none;border-radius:6px;color:#fff;font-size:14px;cursor:pointer;transition:opacity 0.2s;min-height:42px}
 button:active{opacity:0.8}
@@ -32,9 +29,9 @@ button:active{opacity:0.8}
 .all-btn{background:#1890ff}
 .random-btn{background:#722ed1}
 .wrong-btn{background:#fa8c16}
+.switch-btn{background:#2f54eb}
 .tip{height:22px;font-size:15px;color:#67c23a;margin:8px 0}
 .answer{display:none;padding:12px;background:#fef0f0;border-radius:6px;color:#333;margin-top:10px;font-size:15px}
-/* 弹窗移动端适配 */
 .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:999;padding:10px}
 .modal-content{background:#fff;padding:16px;border-radius:10px;width:100%;max-height:85vh;overflow:auto}
 .modal h3{margin-bottom:12px;color:#333;font-size:18px}
@@ -52,8 +49,12 @@ button:active{opacity:0.8}
         <span id="stat-info">总练习：0 题 | 总错题：0 题</span>
     </div>
     <div class="cn" id="cn"></div>
-    <div class="tip-voice">💡 回车切下一格、左键切上一格；长按语音按钮说话转英文</div>
+    <div class="tip-voice">💡 点「上/下一个」切换下划线；点语音按钮说话转英文</div>
     <div class="input-wrap" id="wrap"></div>
+    <div class="btn-box">
+        <button class="switch-btn" id="btnPrevWord">上一个</button>
+        <button class="switch-btn" id="btnNextWord">下一个</button>
+    </div>
     <div class="tip" id="tip"></div>
     <div class="answer" id="ansBox"></div>
 
@@ -63,7 +64,7 @@ button:active{opacity:0.8}
         <button class="chk" id="btnChk">提交核对</button>
         <button class="play" id="btnPlay">播放朗读</button>
         <button class="ans" id="btnAns">查看答案</button>
-        <button class="voice-btn" id="btnVoice">按住说话 语音输入</button>
+        <button class="voice-btn" id="btnVoice">点击开始语音</button>
         <button class="all-btn" id="btnAll">查看全部句子</button>
         <button class="random-btn" id="btnRandom">随机选题</button>
         <button class="wrong-btn" id="btnWrong">错题库</button>
@@ -225,6 +226,8 @@ let inputList = [];
 let totalList = list.length;
 let randomPool = [];
 let currentPool = list;
+let recognition = null;
+let isListening = false;
 
 // 统计数据本地存储
 let statData = JSON.parse(localStorage.getItem('engStat')) || {};
@@ -246,6 +249,8 @@ const btnVoice = document.getElementById("btnVoice");
 const btnAll = document.getElementById("btnAll");
 const btnRandom = document.getElementById("btnRandom");
 const btnWrong = document.getElementById("btnWrong");
+const btnPrevWord = document.getElementById("btnPrevWord");
+const btnNextWord = document.getElementById("btnNextWord");
 
 const modalAll = document.getElementById("modalAll");
 const modalRandom = document.getElementById("modalRandom");
@@ -254,8 +259,7 @@ const allList = document.getElementById("allList");
 const wrongList = document.getElementById("wrongList");
 const randomNum = document.getElementById("randomNum");
 
-// 语音识别
-let recognition = null;
+// 语音识别（适配手机点击）
 if(window.webkitSpeechRecognition || window.SpeechRecognition){
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
@@ -264,7 +268,7 @@ if(window.webkitSpeechRecognition || window.SpeechRecognition){
     recognition.maxAlternatives = 1;
 }else{
     btnVoice.disabled = true;
-    btnVoice.innerText = "浏览器不支持语音";
+    btnVoice.innerText = "不支持语音";
 }
 
 // 关闭弹窗
@@ -300,20 +304,16 @@ function init(){
         ipt.style.width = w.length * 18 + "px";
         ipt.dataset.index = i;
 
-        // 键盘监听：左键上一格、回车下一格
+        // 键盘监听（电脑端保留）
         ipt.addEventListener('keydown', function(e){
             let curIdx = parseInt(this.dataset.index);
             if(e.key === 'ArrowLeft'){
                 e.preventDefault();
-                if(curIdx > 0){
-                    inputList[curIdx - 1].focus();
-                }
+                if(curIdx > 0) inputList[curIdx - 1].focus();
             }
             if(e.key === 'Enter'){
                 e.preventDefault();
-                if(curIdx < inputList.length - 1){
-                    inputList[curIdx + 1].focus();
-                }
+                if(curIdx < inputList.length - 1) inputList[curIdx + 1].focus();
             }
         });
 
@@ -392,6 +392,16 @@ function next(){
     }
 }
 
+// 上/下一个单词（手机触屏按钮）
+function prevWord(){
+    let activeIdx = inputList.findIndex(ipt => ipt === document.activeElement);
+    if(activeIdx > 0) inputList[activeIdx - 1].focus();
+}
+function nextWord(){
+    let activeIdx = inputList.findIndex(ipt => ipt === document.activeElement);
+    if(activeIdx < inputList.length - 1) inputList[activeIdx + 1].focus();
+}
+
 // 查看全部句子
 function showAll(){
     allList.innerHTML = "";
@@ -453,20 +463,22 @@ function showWrong(){
     modalWrong.style.display = "flex";
 }
 
-// 语音识别逻辑
+// 语音识别逻辑（手机点击式）
 if(recognition){
-    btnVoice.addEventListener('mousedown', ()=>{
-        btnVoice.innerText = "正在聆听...松开结束";
-        recognition.start();
+    btnVoice.addEventListener('click', ()=>{
+        if(!isListening){
+            // 开始识别
+            recognition.start();
+            isListening = true;
+            btnVoice.innerText = "正在聆听...点我结束";
+        }else{
+            // 结束识别
+            recognition.stop();
+            isListening = false;
+            btnVoice.innerText = "点击开始语音";
+        }
     });
-    btnVoice.addEventListener('mouseup', ()=>{
-        recognition.stop();
-        btnVoice.innerText = "按住说话 语音输入";
-    });
-    btnVoice.addEventListener('mouseleave', ()=>{
-        recognition.stop();
-        btnVoice.innerText = "按住说话 语音输入";
-    });
+
     recognition.onresult = function(event) {
         const text = event.results[0][0].transcript.trim();
         let activeIpt = document.activeElement;
@@ -475,9 +487,18 @@ if(recognition){
             let nextIdx = parseInt(activeIpt.dataset.index) + 1;
             if(nextIdx < inputList.length) inputList[nextIdx].focus();
         }
+        isListening = false;
+        btnVoice.innerText = "点击开始语音";
     };
+
     recognition.onerror = function(){
-        btnVoice.innerText = "按住说话 语音输入";
+        isListening = false;
+        btnVoice.innerText = "点击开始语音";
+    };
+
+    recognition.onend = function(){
+        isListening = false;
+        btnVoice.innerText = "点击开始语音";
     };
 }
 
@@ -490,6 +511,8 @@ btnAns.onclick = showAns;
 btnAll.onclick = showAll;
 btnRandom.onclick = showRandom;
 btnWrong.onclick = showWrong;
+btnPrevWord.onclick = prevWord;
+btnNextWord.onclick = nextWord;
 
 // 页面加载初始化
 currentPool = list;
