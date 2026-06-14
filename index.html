@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<!-- 手机端视口适配核心 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>英语默写练习（手机电脑通用）</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Microsoft Yahei,sans-serif}
+body{background:#f5f7fa;padding:12px;max-width:100%;margin:0 auto}
+.box{background:#fff;padding:16px;border-radius:12px;box-shadow:0 2px 12px #00000010}
+h2{text-align:center;color:#333;margin-bottom:16px;font-size:20px}
+.top-info{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:12px;color:#666;font-size:14px}
+.cn{font-size:16px;padding:12px;background:#f0f6ff;border-radius:8px;margin-bottom:16px;line-height:1.6;color:#222}
+.tip-voice{color:#9370DB;font-size:13px;margin:6px 0}
+.input-wrap{display:flex;flex-wrap:wrap;gap:10px 12px;margin:16px 0;align-items:center}
+/* 手机加大输入框，方便点击 */
+.inp{border:none;border-bottom:2px solid #666;outline:none;font-size:16px;text-align:center;padding:6px 4px;background:transparent;transition:all 0.2s;min-width:40px;height:40px}
+.inp.error{border-bottom-color:#f56c6c}
+.inp:focus{border-bottom-color:#409eff;border-bottom-width:3px}
+.inp:disabled{background:#f8f8f8;color:#999;cursor:not-allowed}
+/* 按钮自适应，手机自动换行、加大点击区域 */
+.btn-box{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;align-items:center}
+button{padding:10px 14px;border:none;border-radius:6px;color:#fff;font-size:14px;cursor:pointer;transition:opacity 0.2s;min-height:42px}
+button:active{opacity:0.8}
+.chk{background:#409eff}
+.play{background:#67c23a}
+.ans{background:#e6a23c}
+.next{background:#36cf73}
+.prev{background:#ff7875}
+.voice-btn{background:#9370DB}
+.all-btn{background:#1890ff}
+.random-btn{background:#722ed1}
+.wrong-btn{background:#fa8c16}
+.tip{height:22px;font-size:15px;color:#67c23a;margin:8px 0}
+.answer{display:none;padding:12px;background:#fef0f0;border-radius:6px;color:#333;margin-top:10px;font-size:15px}
+/* 弹窗移动端适配 */
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:999;padding:10px}
+.modal-content{background:#fff;padding:16px;border-radius:10px;width:100%;max-height:85vh;overflow:auto}
+.modal h3{margin-bottom:12px;color:#333;font-size:18px}
+.modal-footer{margin-top:15px;display:flex;gap:8px;justify-content:flex-end}
+.home-btn{background:#409eff}
+.item-line{padding:10px 0;border-bottom:1px solid #eee;line-height:1.5;font-size:15px}
+.random-input{margin:10px 0;padding:10px;width:140px;border:1px solid #ccc;border-radius:4px;outline:none;font-size:16px}
+</style>
+</head>
+<body>
+<div class="box">
+    <h2>英语默写练习</h2>
+    <div class="top-info">
+        <span id="page-num">当前题目：1 / 100</span>
+        <span id="stat-info">总练习：0 题 | 总错题：0 题</span>
+    </div>
+    <div class="cn" id="cn"></div>
+    <div class="tip-voice">💡 回车切下一格、左键切上一格；长按语音按钮说话转英文</div>
+    <div class="input-wrap" id="wrap"></div>
+    <div class="tip" id="tip"></div>
+    <div class="answer" id="ansBox"></div>
+
+    <div class="btn-box">
+        <button class="prev" id="btnPrev">上一题</button>
+        <button class="next" id="btnNext">下一题</button>
+        <button class="chk" id="btnChk">提交核对</button>
+        <button class="play" id="btnPlay">播放朗读</button>
+        <button class="ans" id="btnAns">查看答案</button>
+        <button class="voice-btn" id="btnVoice">按住说话 语音输入</button>
+        <button class="all-btn" id="btnAll">查看全部句子</button>
+        <button class="random-btn" id="btnRandom">随机选题</button>
+        <button class="wrong-btn" id="btnWrong">错题库</button>
+    </div>
+</div>
+
+<!-- 全部句子弹窗 -->
+<div class="modal" id="modalAll">
+    <div class="modal-content">
+        <h3>全部练习句子</h3>
+        <div id="allList"></div>
+        <div class="modal-footer">
+            <button class="home-btn" onclick="closeModal('modalAll')">返回主页</button>
+        </div>
+    </div>
+</div>
+
+<!-- 随机选题弹窗 -->
+<div class="modal" id="modalRandom">
+    <div class="modal-content">
+        <h3>随机选题练习</h3>
+        <p>请输入本次练习题目数量：</p>
+        <input type="number" class="random-input" id="randomNum" min="1" value="5">
+        <div class="modal-footer">
+            <button class="random-btn" onclick="startRandom()">开始随机练习</button>
+            <button class="home-btn" onclick="closeModal('modalRandom')">返回主页</button>
+        </div>
+    </div>
+</div>
+
+<!-- 错题库弹窗 -->
+<div class="modal" id="modalWrong">
+    <div class="modal-content">
+        <h3>错题库 & 练习统计</h3>
+        <div id="wrongList"></div>
+        <div class="modal-footer">
+            <button class="home-btn" onclick="closeModal('modalWrong')">返回主页</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 题库数据
+const list = [
+["我每天早上七点起床。","I get up at seven every morning"],
+["我睡前会喝一杯温水。","I drink a cup of warm water before bed"],
+["我需要早点休息。","I need to rest early"],
+["今天我感觉很累。","I feel very tired today"],
+["我打算午休二十分钟。","I plan to take a twenty-minute nap"],
+["我习惯早睡早起。","I am used to early hours"],
+["我每天坚持锻炼身体。","I keep exercising every day"],
+["健康对每个人都很重要。","Health is important for everyone"],
+["我周末喜欢睡懒觉。","I like sleeping late on weekends"],
+["我早上通常不吃早餐。","I usually skip breakfast in the morning"],
+["我需要保持良好的作息。","I need to keep a good schedule"],
+["我每天都会打扫房间。","I clean my room every day"],
+["房间需要保持整洁干净。","The room needs to stay tidy and clean"],
+["我准备洗衣服。","I am going to wash my clothes"],
+["我需要晾晒衣服。","I need to dry the clothes"],
+["我晚上喜欢听音乐放松。","I like listening to music to relax at night"],
+["我很少熬夜。","I seldom stay up late"],
+["熬夜对身体有害。","Staying up late is harmful to health"],
+["我早上简单洗漱一下。","I simply wash up in the morning"],
+["我准备出门了。","I am ready to go out"],
+["外面天气很舒服。","The weather outside is comfortable"],
+["今天风很大。","It is very windy today"],
+["最近气温下降了。","The temperature has dropped recently"],
+["我感觉有点冷。","I feel a little cold"],
+["我需要多穿一件外套。","I need to wear one more coat"],
+["天气慢慢变暖和了。","The weather is getting warmer"],
+["下雨天我不想出门。","I do not want to go out on rainy days"],
+["雨后空气很清新。","The air is fresh after rain"],
+["今天阳光很充足。","The sunshine is bright today"],
+["我喜欢晴天。","I like sunny days"],
+["我讨厌潮湿的天气。","I hate humid weather"],
+["冬天非常干燥。","Winter is very dry"],
+["我皮肤很容易干燥。","My skin gets dry easily"],
+["我需要多喝水。","I need to drink more water"],
+["多喝水有利于新陈代谢。","Drinking water helps metabolism"],
+["我每天保持好心情。","I keep a good mood every day"],
+["心态决定状态。","Attitude determines your state"],
+["我正在慢慢调整自己。","I am gradually adjusting myself"],
+["我愿意尝试新事物。","I am willing to try new things"],
+["生活需要积极乐观。","Life requires positivity and optimism"],
+["我每天整理自己的桌面。","I organize my desk every day"],
+["整洁的环境让人专注。","A tidy environment helps focus"],
+["我偶尔会打扫卫生。","I clean up occasionally"],
+["我周末会简单收拾家里。","I tidy up the house on weekends"],
+["我喜欢干净的居住环境。","I like a clean living environment"],
+["我现在准备洗漱睡觉。","I am going to wash and sleep now"],
+["我睡前不会玩手机。","I do not use phones before sleep"],
+["充足睡眠提升效率。","Enough sleep improves efficiency"],
+["我早上精神很不错。","I feel energetic in the morning"],
+["我简单吃一点午餐。","I have a simple lunch"],
+["晚餐我吃得比较清淡。","My dinner is light and simple"],
+["我尽量少吃油腻食物。","I try to avoid oily food"],
+["健康饮食让人更精神。","Healthy diet makes people energetic"],
+["我饭后会散步十分钟。","I walk for ten minutes after meals"],
+["饭后运动有助于消化。","Post-meal exercise helps digestion"],
+["我保持规律的饮食习惯。","I keep a regular diet habit"],
+["我很少吃宵夜。","I seldom eat snacks at night"],
+["我会控制自己的食欲。","I control my appetite well"],
+["我正在慢慢养成好习惯。","I am developing good habits"],
+["好习惯改变生活。","Good habits change your life"],
+["我每天坚持阅读十分钟。","I read for ten minutes daily"],
+["阅读可以开阔眼界。","Reading broadens your horizons"],
+["我喜欢安静的生活节奏。","I like a quiet life rhythm"],
+["我不喜欢太吵闹的环境。","I dislike noisy environments"],
+["我周末喜欢独处。","I like staying alone on weekends"],
+["独处可以让人思考。","Being alone helps you think"],
+["我偶尔和朋友聚会。","I meet friends occasionally"],
+["社交让生活更丰富。","Social life enriches daily life"],
+["我待人真诚友善。","I am sincere and friendly to others"],
+["我尊重身边的每个人。","I respect everyone around me"],
+["我愿意帮助别人。","I am willing to help others"],
+["善良是最好的品质。","Kindness is the best quality"],
+["我保持谦逊的态度。","I keep a humble attitude"],
+["我做事认真负责。","I work seriously and responsibly"],
+["我尽量不拖延事情。","I try not to delay things"],
+["拖延会浪费很多时间。","Procrastination wastes much time"],
+["我学会合理规划时间。","I learn to plan time reasonably"],
+["时间管理非常重要。","Time management is very important"],
+["我每天记录待办事项。","I record to-do items every day"],
+["清单可以提升执行力。","Checklists improve execution"],
+["我专注当下的生活。","I focus on present life"],
+["我不再过度焦虑未来。","I no longer worry too much about the future"],
+["平常心让人更从容。","A normal mind makes people calm"],
+["我慢慢学会接纳自己。","I gradually learn to accept myself"],
+["自我接纳是成长的开始。","Self acceptance starts growth"],
+["我每天保持微笑。","I keep smiling every day"],
+["微笑能治愈坏情绪。","Smiles heal bad moods"],
+["我学会调节负面情绪。","I learn to adjust negative emotions"],
+["情绪稳定是一种能力。","Emotional stability is a skill"],
+["我不纠结过去的事情。","I do not dwell on past things"],
+["向前看才能不断进步。","Looking forward brings progress"],
+["我愿意持续学习。","I am willing to keep learning"],
+["终身学习是一种态度。","Lifelong learning is an attitude"],
+["我每天进步一点点。","I improve little by little daily"],
+["积累造就巨大改变。","Accumulation creates big changes"],
+["我保持自律的生活。","I maintain a disciplined life"],
+["自律让人更加自由。","Self discipline brings more freedom"],
+["我拒绝懒惰和拖延。","I refuse laziness and delay"],
+["坚持比天赋更加重要。","Persistence matters more than talent"],
+["我相信努力会有回报。","I believe efforts will pay off"],
+["我对未来充满期待。","I look forward to the future"],
+["生活处处充满希望。","Life is full of hope everywhere"],
+["我珍惜当下的每一天。","I cherish every single day"],
+["简单的生活最幸福。","Simple life brings the most happiness"],
+["我现在准备去超市购物。","I am going shopping in the supermarket"],
+["超市今天人很多。","The supermarket is crowded today"],
+["我需要推一个购物车。","I need to push a shopping cart"],
+["我先拿一个购物篮。","I will take a shopping basket first"]
+];
+
+// 全局变量
+let idx = 0;
+let nowWords = [];
+let inputList = [];
+let totalList = list.length;
+let randomPool = [];
+let currentPool = list;
+
+// 统计数据本地存储
+let statData = JSON.parse(localStorage.getItem('engStat')) || {};
+
+const audio = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3");
+const cn = document.getElementById("cn");
+const wrap = document.getElementById("wrap");
+const tip = document.getElementById("tip");
+const ansBox = document.getElementById("ansBox");
+const pageNum = document.getElementById("page-num");
+const statInfo = document.getElementById("stat-info");
+
+const btnPrev = document.getElementById("btnPrev");
+const btnNext = document.getElementById("btnNext");
+const btnChk = document.getElementById("btnChk");
+const btnPlay = document.getElementById("btnPlay");
+const btnAns = document.getElementById("btnAns");
+const btnVoice = document.getElementById("btnVoice");
+const btnAll = document.getElementById("btnAll");
+const btnRandom = document.getElementById("btnRandom");
+const btnWrong = document.getElementById("btnWrong");
+
+const modalAll = document.getElementById("modalAll");
+const modalRandom = document.getElementById("modalRandom");
+const modalWrong = document.getElementById("modalWrong");
+const allList = document.getElementById("allList");
+const wrongList = document.getElementById("wrongList");
+const randomNum = document.getElementById("randomNum");
+
+// 语音识别
+let recognition = null;
+if(window.webkitSpeechRecognition || window.SpeechRecognition){
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+}else{
+    btnVoice.disabled = true;
+    btnVoice.innerText = "浏览器不支持语音";
+}
+
+// 关闭弹窗
+function closeModal(id){
+    document.getElementById(id).style.display = "none";
+}
+
+// 更新顶部题号与统计
+function updateTop(){
+    pageNum.innerText = `当前题目：${idx+1} / ${currentPool.length}`;
+    let totalExe = 0, totalWr = 0;
+    for(let k in statData){
+        totalExe += statData[k].exercise;
+        totalWr += statData[k].wrong;
+    }
+    statInfo.innerText = `总练习：${totalExe} 题 | 总错题：${totalWr} 题`;
+}
+
+// 初始化单题
+function init(){
+    tip.innerText = "";
+    ansBox.style.display = "none";
+    wrap.innerHTML = "";
+    inputList = [];
+
+    let [c,e] = currentPool[idx];
+    cn.innerText = `【${idx+1}】${c}`;
+    nowWords = e.split(" ");
+
+    nowWords.forEach((w, i)=>{
+        let ipt = document.createElement("input");
+        ipt.className = "inp";
+        ipt.style.width = w.length * 18 + "px";
+        ipt.dataset.index = i;
+
+        // 键盘监听：左键上一格、回车下一格
+        ipt.addEventListener('keydown', function(e){
+            let curIdx = parseInt(this.dataset.index);
+            if(e.key === 'ArrowLeft'){
+                e.preventDefault();
+                if(curIdx > 0){
+                    inputList[curIdx - 1].focus();
+                }
+            }
+            if(e.key === 'Enter'){
+                e.preventDefault();
+                if(curIdx < inputList.length - 1){
+                    inputList[curIdx + 1].focus();
+                }
+            }
+        });
+
+        wrap.appendChild(ipt);
+        inputList.push(ipt);
+    });
+    if(inputList.length > 0) inputList[0].focus();
+    updateTop();
+}
+
+// 核对答案
+function check(){
+    let err = false;
+    inputList.forEach(i=>i.classList.remove("error"));
+    inputList.forEach((ipt,i)=>{
+        let u = ipt.value.trim().toLowerCase();
+        let r = nowWords[i].toLowerCase();
+        if(u !== r){
+            ipt.classList.add("error");
+            err = true;
+        }
+    });
+
+    let realIndex = currentPool[idx];
+    let realPos = list.findIndex(item=>item[0]===realIndex[0]);
+    if(!statData[realPos]) statData[realPos] = {exercise:0, wrong:0};
+    statData[realPos].exercise += 1;
+
+    if(err){
+        audio.currentTime = 0;
+        audio.play();
+        tip.innerText = "";
+        statData[realPos].wrong += 1;
+    }else{
+        tip.innerText = "✅ 回答正确！";
+        btnPlay.style.display = "inline-block";
+        // 答对禁用输入框
+        inputList.forEach(ipt => {
+            ipt.disabled = true;
+        });
+    }
+    localStorage.setItem('engStat', JSON.stringify(statData));
+    updateTop();
+}
+
+// 朗读
+function play(){
+    let u = new SpeechSynthesisUtterance(nowWords.join(" "));
+    u.lang = "en-US";
+    speechSynthesis.speak(u);
+}
+
+// 显示答案
+function showAns(){
+    ansBox.innerText = "正确答案：" + nowWords.join(" ");
+    ansBox.style.display = "block";
+}
+
+// 上一题
+function prev(){
+    if(idx > 0){
+        idx--;
+        init();
+    }else{
+        alert("已经是第一题了");
+    }
+}
+
+// 下一题
+function next(){
+    if(idx < currentPool.length - 1){
+        idx++;
+        init();
+    }else{
+        alert("已经是最后一题了");
+    }
+}
+
+// 查看全部句子
+function showAll(){
+    allList.innerHTML = "";
+    list.forEach((item,i)=>{
+        let line = document.createElement("div");
+        line.className = "item-line";
+        line.innerHTML = `<b>${i+1}.</b> 中文：${item[0]}<br>英文：${item[1]}`;
+        allList.appendChild(line);
+    });
+    modalAll.style.display = "flex";
+}
+
+// 打开随机选题弹窗
+function showRandom(){
+    modalRandom.style.display = "flex";
+}
+
+// 开始随机选题
+function startRandom(){
+    let num = parseInt(randomNum.value);
+    if(isNaN(num) || num < 1 || num > totalList){
+        alert(`请输入 1 ~ ${totalList} 之间的数字`);
+        return;
+    }
+    let temp = [...list];
+    randomPool = [];
+    for(let i=0;i<num;i++){
+        let r = Math.floor(Math.random() * temp.length);
+        randomPool.push(temp.splice(r,1)[0]);
+    }
+    currentPool = randomPool;
+    idx = 0;
+    closeModal("modalRandom");
+    init();
+}
+
+// 打开错题库 & 统计
+function showWrong(){
+    wrongList.innerHTML = "";
+    let hasData = false;
+    for(let k in statData){
+        let d = statData[k];
+        if(d.exercise > 0){
+            hasData = true;
+            let item = list[Number(k)];
+            let line = document.createElement("div");
+            line.className = "item-line";
+            line.innerHTML = `
+                <b>第${Number(k)+1}题</b>
+                <br>中文：${item[0]}
+                <br>练习次数：${d.exercise} ｜ 错误次数：${d.wrong}
+            `;
+            wrongList.appendChild(line);
+        }
+    }
+    if(!hasData){
+        wrongList.innerHTML = "<p>暂无练习记录与错题</p>";
+    }
+    modalWrong.style.display = "flex";
+}
+
+// 语音识别逻辑
+if(recognition){
+    btnVoice.addEventListener('mousedown', ()=>{
+        btnVoice.innerText = "正在聆听...松开结束";
+        recognition.start();
+    });
+    btnVoice.addEventListener('mouseup', ()=>{
+        recognition.stop();
+        btnVoice.innerText = "按住说话 语音输入";
+    });
+    btnVoice.addEventListener('mouseleave', ()=>{
+        recognition.stop();
+        btnVoice.innerText = "按住说话 语音输入";
+    });
+    recognition.onresult = function(event) {
+        const text = event.results[0][0].transcript.trim();
+        let activeIpt = document.activeElement;
+        if(activeIpt && activeIpt.classList.contains('inp')){
+            activeIpt.value = text;
+            let nextIdx = parseInt(activeIpt.dataset.index) + 1;
+            if(nextIdx < inputList.length) inputList[nextIdx].focus();
+        }
+    };
+    recognition.onerror = function(){
+        btnVoice.innerText = "按住说话 语音输入";
+    };
+}
+
+// 绑定按钮事件
+btnPrev.onclick = prev;
+btnNext.onclick = next;
+btnChk.onclick = check;
+btnPlay.onclick = play;
+btnAns.onclick = showAns;
+btnAll.onclick = showAll;
+btnRandom.onclick = showRandom;
+btnWrong.onclick = showWrong;
+
+// 页面加载初始化
+currentPool = list;
+window.onload = init;
+</script>
+</body>
+</html>
