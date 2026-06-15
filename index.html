@@ -3,13 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>英语默写练习（手机专用）</title>
+<title>英语默写练习（带学习记录&进度保存）</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Microsoft Yahei,sans-serif}
 body{background:#f5f7fa;padding:12px;max-width:100%;margin:0 auto}
 .box{background:#fff;padding:16px;border-radius:12px;box-shadow:0 2px 12px #00000010}
 h2{text-align:center;color:#333;margin-bottom:16px;font-size:20px}
 .top-info{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:12px;color:#666;font-size:14px}
+/* 学习状态标签 */
+.status-tag{
+  display:inline-block;
+  margin-left:8px;
+  padding:2px 6px;
+  border-radius:4px;
+  font-size:12px;
+}
+.learned{
+  background:#e8f5e9;
+  color:#2e7d32;
+}
+.unlearned{
+  background:#fafafa;
+  color:#666;
+  border:1px solid #eee;
+}
 .cn{font-size:16px;padding:12px;background:#f0f6ff;border-radius:8px;margin-bottom:16px;line-height:1.6;color:#222}
 .tip-voice{color:#9370DB;font-size:13px;margin:6px 0}
 .input-wrap{display:flex;flex-wrap:wrap;gap:10px 12px;margin:16px 0;align-items:center}
@@ -18,22 +35,65 @@ h2{text-align:center;color:#333;margin-bottom:16px;font-size:20px}
 .inp:focus{border-bottom-color:#409eff;border-bottom-width:3px}
 .inp:disabled{background:#f8f8f8;color:#999;cursor:not-allowed}
 .btn-box{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;align-items:center}
-button{padding:10px 14px;border:none;border-radius:6px;color:#fff;font-size:14px;cursor:pointer;transition:opacity 0.2s;min-height:42px}
+button{padding:12px 16px;border:none;border-radius:8px;color:#fff;font-size:15px;cursor:pointer;transition:opacity 0.2s;min-height:48px}
 button:active{opacity:0.8}
+button:disabled{background:#ccc;cursor:not-allowed;opacity:0.7}
 .chk{background:#409eff}
 .play{background:#67c23a}
 .ans{background:#e6a23c}
 .next{background:#36cf73}
 .prev{background:#ff7875}
-.voice-btn{background:#9370DB}
 .all-btn{background:#1890ff}
 .random-btn{background:#722ed1}
 .wrong-btn{background:#fa8c16}
-.switch-btn{background:#2f54eb}
+.continue-btn{background:#27ae60}
+.reset-btn{background:#e74c3c}
 .tip{height:22px;font-size:15px;color:#67c23a;margin:8px 0}
 .answer{display:none;padding:12px;background:#fef0f0;border-radius:6px;color:#333;margin-top:10px;font-size:15px}
+
+/* 弹窗遮罩 */
 .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:999;padding:10px}
-.modal-content{background:#fff;padding:16px;border-radius:10px;width:100%;max-height:85vh;overflow:auto}
+.modal-content{
+  background:#fff;
+  padding:16px;
+  border-radius:10px;
+  width:100%;
+  max-height:85vh;
+  overflow:auto;
+  position:relative;
+}
+.modal-close{
+  position:absolute;
+  top:12px;
+  right:12px;
+  background:#ff4d4f;
+  color:#fff;
+  border:none;
+  border-radius:50%;
+  width:32px;
+  height:32px;
+  cursor:pointer;
+  z-index:1000;
+  font-size:20px;
+  line-height:32px;
+  text-align:center;
+}
+.modal-close-fixed{
+  position:fixed;
+  top:20px;
+  right:20px;
+  background:#ff4d4f;
+  color:#fff;
+  border:none;
+  border-radius:50%;
+  width:40px;
+  height:40px;
+  cursor:pointer;
+  z-index:1000;
+  font-size:20px;
+  line-height:40px;
+  text-align:center;
+}
 .modal h3{margin-bottom:12px;color:#333;font-size:18px}
 .modal-footer{margin-top:15px;display:flex;gap:8px;justify-content:flex-end}
 .home-btn{background:#409eff}
@@ -44,19 +104,21 @@ button:active{opacity:0.8}
 <body>
 <div class="box">
     <h2>英语默写练习</h2>
+    <!-- 新增：继续/重置按钮 -->
+    <div class="btn-box" style="margin-top:0;margin-bottom:12px">
+        <button class="continue-btn" id="btnContinue">继续上次进度</button>
+        <button class="reset-btn" id="btnReset">刷新重新开始</button>
+    </div>
+
     <div class="top-info">
         <span id="page-num">当前题目：1 / 100</span>
         <span id="stat-info">总练习：0 题 | 总错题：0 题</span>
+        <span id="learn-stat">已学：0 / 总计：0</span>
     </div>
+
     <div class="cn" id="cn"></div>
-    <div class="tip-voice">💡 点「上/下一个」切换下划线；点语音按钮说话转英文</div>
+    <div class="tip-voice">💡 电脑：回车下一个、左键上一个；手机：直接点框输入</div>
     <div class="input-wrap" id="wrap"></div>
-    <div class="btn-box">
-        <button class="switch-btn" id="btnPrevWord">上一个</button>
-        <button class="switch-btn" id="btnNextWord">下一个</button>
-    </div>
-    <div class="tip" id="tip"></div>
-    <div class="answer" id="ansBox"></div>
 
     <div class="btn-box">
         <button class="prev" id="btnPrev">上一题</button>
@@ -64,33 +126,33 @@ button:active{opacity:0.8}
         <button class="chk" id="btnChk">提交核对</button>
         <button class="play" id="btnPlay">播放朗读</button>
         <button class="ans" id="btnAns">查看答案</button>
-        <button class="voice-btn" id="btnVoice">点击开始语音</button>
         <button class="all-btn" id="btnAll">查看全部句子</button>
         <button class="random-btn" id="btnRandom">随机选题</button>
         <button class="wrong-btn" id="btnWrong">错题库</button>
     </div>
+
+    <div class="tip" id="tip"></div>
+    <div class="answer" id="ansBox"></div>
 </div>
 
 <!-- 全部句子弹窗 -->
 <div class="modal" id="modalAll">
     <div class="modal-content">
+        <button class="modal-close-fixed" onclick="closeModal('modalAll')">×</button>
         <h3>全部练习句子</h3>
         <div id="allList"></div>
-        <div class="modal-footer">
-            <button class="home-btn" onclick="closeModal('modalAll')">返回主页</button>
-        </div>
     </div>
 </div>
 
 <!-- 随机选题弹窗 -->
 <div class="modal" id="modalRandom">
     <div class="modal-content">
-        <h3>随机选题练习</h3>
+        <button class="modal-close" onclick="closeModal('modalRandom')">×</button>
+        <h3>随机选题练习（自动跳过已学内容）</h3>
         <p>请输入本次练习题目数量：</p>
         <input type="number" class="random-input" id="randomNum" min="1" value="5">
         <div class="modal-footer">
             <button class="random-btn" onclick="startRandom()">开始随机练习</button>
-            <button class="home-btn" onclick="closeModal('modalRandom')">返回主页</button>
         </div>
     </div>
 </div>
@@ -98,11 +160,9 @@ button:active{opacity:0.8}
 <!-- 错题库弹窗 -->
 <div class="modal" id="modalWrong">
     <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('modalWrong')">×</button>
         <h3>错题库 & 练习统计</h3>
         <div id="wrongList"></div>
-        <div class="modal-footer">
-            <button class="home-btn" onclick="closeModal('modalWrong')">返回主页</button>
-        </div>
     </div>
 </div>
 
@@ -226,11 +286,11 @@ let inputList = [];
 let totalList = list.length;
 let randomPool = [];
 let currentPool = list;
-let recognition = null;
-let isListening = false;
 
-// 统计数据本地存储
+// 本地存储：练习统计、错题、学习标记、当前进度
 let statData = JSON.parse(localStorage.getItem('engStat')) || {};
+let learnRecord = JSON.parse(localStorage.getItem('engLearnRecord')) || {}; // 已学标记 {索引:true/false}
+let lastIndex = parseInt(localStorage.getItem('engLastIndex')) || 0; // 上次进度
 
 const audio = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3");
 const cn = document.getElementById("cn");
@@ -239,18 +299,18 @@ const tip = document.getElementById("tip");
 const ansBox = document.getElementById("ansBox");
 const pageNum = document.getElementById("page-num");
 const statInfo = document.getElementById("stat-info");
+const learnStat = document.getElementById("learn-stat");
 
 const btnPrev = document.getElementById("btnPrev");
 const btnNext = document.getElementById("btnNext");
 const btnChk = document.getElementById("btnChk");
 const btnPlay = document.getElementById("btnPlay");
 const btnAns = document.getElementById("btnAns");
-const btnVoice = document.getElementById("btnVoice");
 const btnAll = document.getElementById("btnAll");
 const btnRandom = document.getElementById("btnRandom");
 const btnWrong = document.getElementById("btnWrong");
-const btnPrevWord = document.getElementById("btnPrevWord");
-const btnNextWord = document.getElementById("btnNextWord");
+const btnContinue = document.getElementById("btnContinue");
+const btnReset = document.getElementById("btnReset");
 
 const modalAll = document.getElementById("modalAll");
 const modalRandom = document.getElementById("modalRandom");
@@ -259,24 +319,12 @@ const allList = document.getElementById("allList");
 const wrongList = document.getElementById("wrongList");
 const randomNum = document.getElementById("randomNum");
 
-// 语音识别（适配手机点击）
-if(window.webkitSpeechRecognition || window.SpeechRecognition){
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-}else{
-    btnVoice.disabled = true;
-    btnVoice.innerText = "不支持语音";
-}
-
 // 关闭弹窗
 function closeModal(id){
     document.getElementById(id).style.display = "none";
 }
 
-// 更新顶部题号与统计
+// 更新顶部所有统计（题号、练习、错题、已学数量）
 function updateTop(){
     pageNum.innerText = `当前题目：${idx+1} / ${currentPool.length}`;
     let totalExe = 0, totalWr = 0;
@@ -285,6 +333,24 @@ function updateTop(){
         totalWr += statData[k].wrong;
     }
     statInfo.innerText = `总练习：${totalExe} 题 | 总错题：${totalWr} 题`;
+
+    // 统计已学数量
+    let learnedCount = 0;
+    for(let i=0; i<totalList; i++){
+        if(learnRecord[i]) learnedCount++;
+    }
+    learnStat.innerText = `已学：${learnedCount} / 总计：${totalList}`;
+
+    // 实时保存当前进度
+    localStorage.setItem('engLastIndex', idx);
+}
+
+// 标记当前题目为「已学习」
+function markLearned(){
+    let realPos = list.findIndex(item => item[0] === currentPool[idx][0]);
+    learnRecord[realPos] = true;
+    localStorage.setItem('engLearnRecord', JSON.stringify(learnRecord));
+    updateTop();
 }
 
 // 初始化单题
@@ -295,7 +361,12 @@ function init(){
     inputList = [];
 
     let [c,e] = currentPool[idx];
-    cn.innerText = `【${idx+1}】${c}`;
+    let realPos = list.findIndex(item => item[0] === c);
+    let statusText = learnRecord[realPos] 
+        ? '<span class="status-tag learned">已学习</span>' 
+        : '<span class="status-tag unlearned">未学习</span>';
+
+    cn.innerHTML = `【${idx+1}】${c} ${statusText}`;
     nowWords = e.split(" ");
 
     nowWords.forEach((w, i)=>{
@@ -304,7 +375,6 @@ function init(){
         ipt.style.width = w.length * 18 + "px";
         ipt.dataset.index = i;
 
-        // 键盘监听（电脑端保留）
         ipt.addEventListener('keydown', function(e){
             let curIdx = parseInt(this.dataset.index);
             if(e.key === 'ArrowLeft'){
@@ -350,10 +420,11 @@ function check(){
     }else{
         tip.innerText = "✅ 回答正确！";
         btnPlay.style.display = "inline-block";
-        // 答对禁用输入框
         inputList.forEach(ipt => {
             ipt.disabled = true;
         });
+        // 答对自动标记为已学习
+        markLearned();
     }
     localStorage.setItem('engStat', JSON.stringify(statData));
     updateTop();
@@ -370,6 +441,8 @@ function play(){
 function showAns(){
     ansBox.innerText = "正确答案：" + nowWords.join(" ");
     ansBox.style.display = "block";
+    // 查看答案也标记为已学习
+    markLearned();
 }
 
 // 上一题
@@ -392,23 +465,14 @@ function next(){
     }
 }
 
-// 上/下一个单词（手机触屏按钮）
-function prevWord(){
-    let activeIdx = inputList.findIndex(ipt => ipt === document.activeElement);
-    if(activeIdx > 0) inputList[activeIdx - 1].focus();
-}
-function nextWord(){
-    let activeIdx = inputList.findIndex(ipt => ipt === document.activeElement);
-    if(activeIdx < inputList.length - 1) inputList[activeIdx + 1].focus();
-}
-
 // 查看全部句子
 function showAll(){
     allList.innerHTML = "";
     list.forEach((item,i)=>{
         let line = document.createElement("div");
         line.className = "item-line";
-        line.innerHTML = `<b>${i+1}.</b> 中文：${item[0]}<br>英文：${item[1]}`;
+        let tag = learnRecord[i] ? "[已学]" : "[未学]";
+        line.innerHTML = `<b>${i+1}.${tag}</b> 中文：${item[0]}<br>英文：${item[1]}`;
         allList.appendChild(line);
     });
     modalAll.style.display = "flex";
@@ -419,14 +483,26 @@ function showRandom(){
     modalRandom.style.display = "flex";
 }
 
-// 开始随机选题
+// 开始随机选题：自动过滤已学题目
 function startRandom(){
     let num = parseInt(randomNum.value);
-    if(isNaN(num) || num < 1 || num > totalList){
-        alert(`请输入 1 ~ ${totalList} 之间的数字`);
+    if(isNaN(num) || num < 1){
+        alert("请输入大于0的数字");
         return;
     }
-    let temp = [...list];
+    // 只筛选 未学习 的题目
+    let unlearnList = list.filter((_, idx) => !learnRecord[idx]);
+    if(unlearnList.length === 0){
+        alert("所有题目都已学习！请点击【刷新重新开始】清空记录");
+        closeModal("modalRandom");
+        return;
+    }
+    if(num > unlearnList.length){
+        num = unlearnList.length;
+        alert(`剩余未学题目只有 ${num} 道，将自动调整数量`);
+    }
+
+    let temp = [...unlearnList];
     randomPool = [];
     for(let i=0;i<num;i++){
         let r = Math.floor(Math.random() * temp.length);
@@ -447,10 +523,11 @@ function showWrong(){
         if(d.exercise > 0){
             hasData = true;
             let item = list[Number(k)];
+            let tag = learnRecord[Number(k)] ? "[已学]" : "[未学]";
             let line = document.createElement("div");
             line.className = "item-line";
             line.innerHTML = `
-                <b>第${Number(k)+1}题</b>
+                <b>第${Number(k)+1}题 ${tag}</b>
                 <br>中文：${item[0]}
                 <br>练习次数：${d.exercise} ｜ 错误次数：${d.wrong}
             `;
@@ -463,43 +540,24 @@ function showWrong(){
     modalWrong.style.display = "flex";
 }
 
-// 语音识别逻辑（手机点击式）
-if(recognition){
-    btnVoice.addEventListener('click', ()=>{
-        if(!isListening){
-            // 开始识别
-            recognition.start();
-            isListening = true;
-            btnVoice.innerText = "正在聆听...点我结束";
-        }else{
-            // 结束识别
-            recognition.stop();
-            isListening = false;
-            btnVoice.innerText = "点击开始语音";
-        }
-    });
+// 继续上次进度
+function continueLast(){
+    currentPool = list;
+    idx = lastIndex;
+    init();
+    alert(`已跳转到上次进度：第 ${idx+1} 题`);
+}
 
-    recognition.onresult = function(event) {
-        const text = event.results[0][0].transcript.trim();
-        let activeIpt = document.activeElement;
-        if(activeIpt && activeIpt.classList.contains('inp')){
-            activeIpt.value = text;
-            let nextIdx = parseInt(activeIpt.dataset.index) + 1;
-            if(nextIdx < inputList.length) inputList[nextIdx].focus();
-        }
-        isListening = false;
-        btnVoice.innerText = "点击开始语音";
-    };
-
-    recognition.onerror = function(){
-        isListening = false;
-        btnVoice.innerText = "点击开始语音";
-    };
-
-    recognition.onend = function(){
-        isListening = false;
-        btnVoice.innerText = "点击开始语音";
-    };
+// 刷新重新开始：清空学习记录、保留错题&练习统计
+function resetAll(){
+    if(!confirm("确定要重新开始吗？\n将清空所有「已学习」标记，错题记录会保留！")) return;
+    learnRecord = {};
+    lastIndex = 0;
+    currentPool = list;
+    idx = 0;
+    localStorage.setItem('engLearnRecord', JSON.stringify(learnRecord));
+    localStorage.setItem('engLastIndex', 0);
+    init();
 }
 
 // 绑定按钮事件
@@ -511,11 +569,12 @@ btnAns.onclick = showAns;
 btnAll.onclick = showAll;
 btnRandom.onclick = showRandom;
 btnWrong.onclick = showWrong;
-btnPrevWord.onclick = prevWord;
-btnNextWord.onclick = nextWord;
+btnContinue.onclick = continueLast;
+btnReset.onclick = resetAll;
 
-// 页面加载初始化
+// 页面默认加载：直接加载完整题库、读取上次进度
 currentPool = list;
+idx = lastIndex;
 window.onload = init;
 </script>
 </body>
